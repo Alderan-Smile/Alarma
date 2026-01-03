@@ -5,7 +5,17 @@ sys.path.append(str(Path(__file__).parent.parent))
 from Modelo import contryDTO, holidayDTO
 
 
-def get_db_connection(db_path='../Resources/database.db'):
+def get_db_connection(db_path: str = None):
+    # default path relative to project root: <repo>/Resources/database.db
+    if db_path is None:
+        base = Path(__file__).parent.parent
+        resources = base / 'Resources'
+        resources.mkdir(parents=True, exist_ok=True)
+        db_path = str(resources / 'database.db')
+    else:
+        # ensure parent exists
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn

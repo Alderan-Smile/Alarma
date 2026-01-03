@@ -28,6 +28,36 @@ def build(app):
     row1.add(year_input)
     box.add(row1)
 
+    # Weekday selection (Mon-Sun)
+    weekdays_box = toga.Box(style=Pack(direction=ROW, padding_bottom=10))
+    weekdays_box.add(toga.Label('Días: ', style=Pack(padding_right=6)))
+    weekday_names = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom']
+    weekday_checks = []
+    for i, name in enumerate(weekday_names):
+        cb = toga.Checkbox(label=name, style=Pack(padding_right=6))
+        # default Mon-Fri checked
+        if i < 5:
+            cb.value = True
+        weekday_checks.append(cb)
+        weekdays_box.add(cb)
+    box.add(weekdays_box)
+
+    # Recurrence options
+    recur_box = toga.Box(style=Pack(direction=ROW, padding_bottom=10))
+    recur_box.add(toga.Label('Recurrencia: ', style=Pack(padding_right=6)))
+    recur_choice = toga.Selection(items=['None', 'Weekly', 'Monthly', 'RRULE'], style=Pack(width=140))
+    recur_choice.value = 'None'
+    recur_box.add(recur_choice)
+    recur_interval = toga.NumberInput(value=1, style=Pack(width=80))
+    recur_box.add(toga.Label('Intervalo:', style=Pack(padding_left=6, padding_right=6)))
+    recur_box.add(recur_interval)
+    recur_monthday = toga.NumberInput(value=datetime.now().day, style=Pack(width=80))
+    recur_box.add(toga.Label('Día mes:', style=Pack(padding_left=6, padding_right=6)))
+    recur_box.add(recur_monthday)
+    recur_rrule = toga.TextInput(placeholder='Ej: RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=10', style=Pack(flex=1))
+    recur_box.add(recur_rrule)
+    box.add(recur_box)
+
     row2 = toga.Box(style=Pack(direction=ROW, padding_bottom=10))
     row2.add(sync_button)
     row2.add(alarm_button)
@@ -107,7 +137,26 @@ def on_schedule(conn, country_box, app):
 
     # Schedule recurring workday alarms (skipping weekends and feriados)
     try:
-        scheduled = scheduler.schedule_recurring_workday_alarms(conn, country_code, hour=hh, minute=mm, occurrences=occurrences)
+        # gather selected weekdays
+        selected_weekdays = set(i for i, cb in enumerate(weekday_checks) if cb.value)
+        if not selected_weekdays:
+            app.main_window.info_dialog('Error', 'Seleccione al menos un día de la semana')
+            return
+
+        # Build recurrence rule
+        recur_type = recur_choice.value
+        rule = None
+        if recur_type == 'Weekly':
+            rule = {'type': 'weekly', 'interval': int(recur_interval.value), 'weekdays': selected_weekdays}
+        elif recur_type == 'Monthly':
+            rule = {'type': 'monthly', 'bymonthday': int(recur_monthday.value)}
+        elif recur_type == 'RRULE':
+            rule = {'type': 'rrule', 'rrule': recur_rrule.value}
+
+        if rule:
+            scheduled = scheduler.schedule_with_rule(conn, country_code, hour=hh, minute=mm, occurrences=occurrences, rule=rule)
+        else:
+            scheduled = scheduler.schedule_recurring_workday_alarms(conn, country_code, hour=hh, minute=mm, occurrences=occurrences, weekdays=selected_weekdays)
         app.main_window.info_dialog('Programado', f'Se programaron {scheduled} alarmas laborales')
     except Exception as e:
         app.main_window.info_dialog('Error', f'No se pudo programar: {e}')

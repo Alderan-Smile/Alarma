@@ -35,6 +35,14 @@ briefcase run android
 - Debes implementar permisos runtime `WRITE_CALENDAR` y `READ_CALENDAR`.
 - `Controlador/calendar_adapters/android_adapter.py` contiene un ejemplo con `pyjnius`. Ajusta `calendar_id` y manejo de permisos.
 
+Parche Android (PermissionBridge)
+- He incluido un parche de ejemplo en `docs/android_patch/` con:
+	- `PermissionBridge.java` — puente estático para exponer `grantResults` a Python.
+	- `Activity_onRequestPermissionsResult.java` / `Activity_onRequestPermissionsResult.kt` — snippets para añadir a tu Activity.
+	- `README.md` con instrucciones de ubicación y rebuild.
+
+Coloca `PermissionBridge.java` en el paquete Java de tu app (por ejemplo `app/src/main/java/org/example/alarma/`) y añade el snippet en la Activity antes de reconstruir.
+
 Recomendación para producción
 - Para alarmas recurrentes completas en Android, usa el `AlarmManager` o crea eventos recurrentes en el calendario.
 - Para excluir feriados, esta implementación crea eventos individuales para cada fecha laboral futura.

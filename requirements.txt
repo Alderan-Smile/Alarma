@@ -2,3 +2,4 @@ toga
 pyjnius
 requests
 briefcase
+python-dateutil
