@@ -4,7 +4,7 @@ import toga
 from toga.style import Pack
 from toga.style.pack import COLUMN, ROW
 
-from Controlador import apicon, dbcon
+from Controlador import apicon, dbcon, scheduler
 from Controlador.calendar_adapters import adapter as calendar_adapter
 
 
@@ -82,9 +82,6 @@ def on_schedule(conn, country_box, app):
         app.main_window.info_dialog('Error', 'Seleccione un país primero')
         return
     country_code = country_box._country_map[sel]
-    year = datetime.now().year
-    holidays = dbcon.fetch_holidays_by_country(conn, country_code, year)
-    holidays_set = set(h.date for h in holidays)
 
     # Ask time for alarm
     time_dialog = app.main_window.question_dialog('Hora', 'Ingrese la hora de la alarma en formato HH:MM (24h)')
@@ -96,21 +93,24 @@ def on_schedule(conn, country_box, app):
         app.main_window.info_dialog('Error', 'Formato de hora inválido')
         return
 
-    # Compute next workday and create event via adapter
-    today = date.today()
-    nd = next_workday(today, holidays_set)
-    alarm_datetime = datetime.combine(nd, time(hh, mm))
-
-    title = 'Alarma laboral'
-    description = 'Alarma programada para día laboral, omitiendo feriados y fines de semana.'
-
+    # Ask number of occurrences to schedule
+    occ_dialog = app.main_window.question_dialog('Ocurrencias', '¿Cuántas próximas alarmas desea programar? (ej: 10)')
+    if not occ_dialog:
+        return
     try:
-        calendar_adapter.create_event(alarm_datetime, title, description)
-        app.main_window.info_dialog('Programado', f'Alarma programada para {alarm_datetime}')
-    except NotImplementedError as e:
-        app.main_window.info_dialog('No implementado', str(e))
+        occurrences = int(occ_dialog)
+        if occurrences <= 0:
+            raise ValueError()
+    except Exception:
+        app.main_window.info_dialog('Error', 'Número de ocurrencias inválido')
+        return
+
+    # Schedule recurring workday alarms (skipping weekends and feriados)
+    try:
+        scheduled = scheduler.schedule_recurring_workday_alarms(conn, country_code, hour=hh, minute=mm, occurrences=occurrences)
+        app.main_window.info_dialog('Programado', f'Se programaron {scheduled} alarmas laborales')
     except Exception as e:
-        app.main_window.info_dialog('Error', f'No se pudo crear la alarma: {e}')
+        app.main_window.info_dialog('Error', f'No se pudo programar: {e}')
 
 
 def main():
