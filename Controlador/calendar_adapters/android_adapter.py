@@ -79,29 +79,44 @@ def ensure_calendar_permissions():
     ActivityCompat.requestPermissions(activity, missing, 1)
     # First try to observe a Java-side PermissionBridge if the Android project added it.
     try:
-      PermissionBridge = autoclass('org.example.alarma.PermissionBridge')
-      # poll for lastGrantResults
-      import time as _time
-      timeout = 15
-      elapsed = 0
-      interval = 0.5
-      granted = None
-      while elapsed < timeout:
+      # Try to find PermissionBridge class in the app package (works with Briefcase/BeeWare)
+      pkg = activity.getPackageName()
+      bridge_cls = f"{pkg}.PermissionBridge"
+      PermissionBridge = None
+      try:
+        PermissionBridge = autoclass(bridge_cls)
+      except Exception:
         try:
-          res = PermissionBridge.getLastGrantResults()
+          # fallback to the example package used by the repo
+          PermissionBridge = autoclass('org.example.alarma.PermissionBridge')
         except Exception:
-          res = None
-        if res is not None and len(res) > 0:
-          # interpret results
-          ok = True
-          for i in range(len(res)):
-            if res[i] != 0:
-              ok = False
-              break
-          granted = ok
-          break
-        _time.sleep(interval)
-        elapsed += interval
+          PermissionBridge = None
+
+      # If we have a bridge, poll it briefly for results
+      if PermissionBridge is not None:
+        import time as _time
+        timeout = 15
+        elapsed = 0
+        interval = 0.5
+        granted = None
+        while elapsed < timeout:
+          try:
+            res = PermissionBridge.getLastGrantResults()
+          except Exception:
+            res = None
+          if res is not None and len(res) > 0:
+            # interpret results
+            ok = True
+            for i in range(len(res)):
+              if res[i] != 0:
+                ok = False
+                break
+            granted = ok
+            break
+          _time.sleep(interval)
+          elapsed += interval
+      else:
+        granted = None
     except Exception:
       granted = None
 

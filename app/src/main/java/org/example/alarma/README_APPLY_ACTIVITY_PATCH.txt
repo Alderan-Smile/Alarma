@@ -28,6 +28,11 @@ README: How to apply Activity patch for PermissionBridge
    <uses-permission android:name="android.permission.READ_CALENDAR" />
    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
 
+Note for Briefcase/BeeWare users
+- Briefcase generates the Android app package name automatically from your project metadata. The Python adapter now detects the app package at runtime and will look for `PermissionBridge` in that package.
+- Place `PermissionBridge.java` under `app/src/main/java/<your_app_package_path>/PermissionBridge.java` (for example, if package is `com.example.myapp`, place it in `app/src/main/java/com/example/myapp/PermissionBridge.java`).
+- If you prefer, you can keep the example path `org.example.alarma.PermissionBridge` but placing it in the actual app package is recommended for BeeWare projects.
+
 4) Rebuild and run the app:
 
    briefcase build android
